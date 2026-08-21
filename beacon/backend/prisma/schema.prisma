@@ -1,0 +1,78 @@
+// Prisma schema for Beacon
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CITIZEN
+  ADMIN
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  name      String
+  phone     String?
+  password  String // bcrypt hash, never plain text
+  role      Role     @default(CITIZEN)
+  createdAt DateTime @default(now())
+
+  reports Report[]
+}
+
+model Report {
+  id          String   @id @default(cuid())
+  category    String
+  urgency     String // low | medium | high | emergency
+  description String
+
+  latitude  Float?
+  longitude Float?
+  accuracy  Float?
+
+  mediaUrl  String?
+  mediaType String? // image | video
+
+  status        String  @default("received") // received | reviewing | assigned | resolved
+  adminUnread   Boolean @default(true)
+  citizenUnread Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reporter   User   @relation(fields: [reporterId], references: [id])
+  reporterId String
+
+  messages Message[]
+
+  @@index([reporterId])
+  @@index([status])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  text      String
+  from      String // citizen | admin
+  createdAt DateTime @default(now())
+
+  report   Report @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportId String
+
+  @@index([reportId])
+}
+
+model Bulletin {
+  id        String   @id @default(cuid())
+  title     String
+  category  String // First Aid | Safety | Community
+  summary   String
+  body      String
+  createdAt DateTime @default(now())
+}
